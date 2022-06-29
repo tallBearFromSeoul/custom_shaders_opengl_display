@@ -13,8 +13,8 @@ void scroll_callback(GLFWwindow *, double, double);
 void processInput(GLFWwindow *);
 
 bool firstMouse = true;
-const unsigned int W = 800;
-const unsigned int H = 600;
+const unsigned int W = 1080;
+const unsigned int H = 720;
 float lastX = W / 2.f;
 float lastY = H / 2.f;
 float deltaTime = 0.f;
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 	stbi_set_flip_vertically_on_load(true);
 	glEnable(GL_DEPTH_TEST);
 	Shader shader("../config/model_loading.vs","../config/model_loading.fs");
-	Shader shader_sample("../config/sample.vs","../config/sample.fs");
+	Shader shader_sample("../config/forward.vs","../config/forward.fs");
 	GLModel gl_model("../Material/bus_setia_negara_texturizer.blend");
 	//GLModel gl_model("../14-lowpolyfiatuno/LowPolyFiatUNO.obj");
 	while (!glfwWindowShouldClose(window)) {
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.use();
 		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		model = glm::translate(model, glm::vec3(0.0f, 20.0f, 0.0f));
 		model = glm::rotate(model, glm::degrees(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		glm::mat4 view = camera.GetViewMatrix();
@@ -70,11 +70,73 @@ int main(int argc, char *argv[]) {
 		shader.setMat4("model",model);
 		shader.setMat4("view",view);
 		shader.setMat4("projection",projection);
-		gl_model.Draw(shader);
-			
-		
+		//gl_model.Draw(shader);
+
 		shader_sample.use();
-		//gl_model.Draw(shader_sample);
+		float fc_len = W / H;
+		float skew = 0.f;
+		float K_data[16] = {
+			fc_len, skew, 0.5f, 0.f,
+			 0.f, fc_len, 0.5f, 0.f,
+			 0.f, 0.f, 0.f, 0.f,
+			 0.f, 0.f, 0.f, 0.f
+		};
+		/*
+		float K_data[16] = {
+			 fc_len, skew, 0.5f, 0.f,
+			 0.f, fc_len, 0.5f, 0.f,
+			 0.f, 0.f, 0.f, 0.f,
+			 0.f, 0.f, 0.f, 0.f
+		};
+		*/
+		
+		glm::mat4 K;
+		memcpy(glm::value_ptr(K), K_data, sizeof(K_data));
+		glm::mat4 pose = glm::mat4(1.0f);	
+		pose = glm::translate(pose, glm::vec3(0.f,10.f,0.f));
+		pose = glm::inverse(pose);
+		shader_sample.setMat4("K",K);
+		shader_sample.setMat4("pose",pose);
+		shader_sample.setMat4("view",view);
+		shader_sample.setMat4("projection",projection);
+
+		float vertices[] = {
+			10.f, 3.f, 0.f,
+			10.f, 10.f, 0.f,
+			3.f, 10.f, 0.f,
+			3.f, 3.f, 0.f
+			/*
+			0.5f,  0.5f, 0.5f,  // top right
+			 0.5f, -0.5f, 0.5f,  // bottom right
+			-0.5f, -0.5f, 0.5f,  // bottom left
+			-0.5f,  0.5f, 0.5f   // top left 
+			*/
+		};
+		unsigned int indices[] = {  // note that we start from 0!
+			0, 1, 3,   // first triangle
+			1, 2, 3    // second triangle
+		};
+
+		unsigned int VAO1;
+		glGenVertexArrays(1, &VAO1);
+		glBindVertexArray(VAO1);
+		unsigned int VBO1;
+		glGenBuffers(1, &VBO1);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO1);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		unsigned int EBO1;
+		glGenBuffers(1, &EBO1);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO1);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(3); 
+	
+		glBindVertexArray(VAO1);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		glBindVertexArray(0);
+		//gl_model.Draw(shader_sample.ID);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
