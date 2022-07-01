@@ -6,10 +6,8 @@
 #include <assimp/postprocess.h>
 #include "mesh.hpp" 
 
-unsigned int TextureFromFile(const char *path, const std::string &directory, bool gamma = false) {
+unsigned int loadTexture(const char *path, bool gamma = false) {
 	std::string filename = std::string(path);
-	//filename = directory + '/' + filename;
-	filename = "../Texturizer/way.jpg";
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
 
@@ -41,6 +39,12 @@ unsigned int TextureFromFile(const char *path, const std::string &directory, boo
 
 	return textureID;
 
+}
+
+unsigned int loadTexture(const char *path, const std::string &directory, bool gamma = false) {
+	std::string filename = std::string(path);
+	filename = directory+"/"+filename;
+	loadTexture(filename.c_str(), gamma);
 }
 
 class GLModel {
@@ -169,7 +173,7 @@ class GLModel {
 				}
 				if (!skip)	{
 					Texture texture;
-					texture.id = TextureFromFile(str.C_Str(), this->directory);
+					texture.id = loadTexture(str.C_Str(), this->directory);
 					texture.type = typeName;
 					texture.path = str.C_Str();
 					textures.push_back(texture);
